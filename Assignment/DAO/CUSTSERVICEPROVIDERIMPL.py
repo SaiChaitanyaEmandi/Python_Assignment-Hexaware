@@ -2,7 +2,8 @@ from Assignment.UTIL.DBCONNECTION import DBConnection
 from Assignment.ENTITY.ICUSTOMERSERVICEPROVIDER import i_customer_service
 from Assignment.DAO.ACCOUNT import Account
 from Assignment.DAO.TRANSACTION import Transaction
-
+from Assignment.EXCEPTIONS.INSUFFICIENTFUND import insufficient_fund_exception
+from Assignment.EXCEPTIONS.INVALIDACCOUNT import invalid_account_exception
 
 class cust_service_provider_impl(i_customer_service, Account, DBConnection):
     def get_account_balance(self):
@@ -13,16 +14,26 @@ class cust_service_provider_impl(i_customer_service, Account, DBConnection):
             print(res)
 
     def get_account_details(self):
-        account = Account()
-        self.acc_num = int(input("Enter the account number: "))
-        query = f'select * from Account where acc_num = {self.acc_num}'
-        DBConnection.getConnection()
-        stmt = DBConnection.connection.cursor()
-        stmt.execute(query)
-        data = stmt.fetchall()
-        for i in data:
-            print(i)
-        print("Account details displayed successfully")
+        try:
+            account = Account()
+            self.acc_num = int(input("Enter the account number: "))
+            query = f'select * from Account where acc_num = {self.acc_num}'
+            DBConnection.getConnection()
+            stmt = DBConnection.connection.cursor()
+            stmt.execute(query)
+            data = stmt.fetchall()
+            if len(data) < 1:
+                raise invalid_account_exception("Invalid account number")
+            else:
+                for i in data:
+                    print(i)
+                print("Account details displayed successfully")
+
+        except invalid_account_exception as e:
+            print(e)
+
+        except Exception as e:
+            print(e)
 
     def deposit(self):
         account = Account()
@@ -45,23 +56,30 @@ class cust_service_provider_impl(i_customer_service, Account, DBConnection):
             print("Invalid deposit amount")
 
     def withdraw(self):
-        account = Account()
-        self.acc_num = int(input("Enter the account number: "))
-        amount = float(input("Enter the amount to withdraw: "))
-        balance = account.fetch(self.acc_num)
-        if (amount > 0) and (amount <= balance):
-            balance -= amount
-            account.update_balance(balance, self.acc_num)
-            print(f"Withdraw successful. Total balance = {balance}")
-            transaction = Transaction()
-            transaction.acc_num = self.acc_num
-            transaction.description = "Withdraw"
-            transaction.transaction_date = input("Enter the transaction date: ")
-            transaction.transaction_type = "Withdraw"
-            transaction.transaction_amount = amount
-            transaction.insert_into()
-        else:
-            print("Invalid Withdrawal amount")
+        try:
+            account = Account()
+            self.acc_num = int(input("Enter the account number: "))
+            amount = float(input("Enter the amount to withdraw: "))
+            balance = account.fetch(self.acc_num)
+            if (amount > 0) and (amount <= balance):
+                balance -= amount
+                account.update_balance(balance, self.acc_num)
+                print(f"Withdraw successful. Total balance = {balance}")
+                transaction = Transaction()
+                transaction.acc_num = self.acc_num
+                transaction.description = "Withdraw"
+                transaction.transaction_date = input("Enter the transaction date: ")
+                transaction.transaction_type = "Withdraw"
+                transaction.transaction_amount = amount
+                transaction.insert_into()
+            else:
+                raise insufficient_fund_exception("Insufficient funds")
+
+        except insufficient_fund_exception as e:
+            print(e)
+
+        except Exception as e:
+            print(e)
 
     def transfer(self):
         account = Account()
